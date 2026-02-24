@@ -26,43 +26,48 @@ class GeneralPurposeAgentApplication(ChatCompletion):
         self.tools: list[BaseTool] = []
 
     async def _get_mcp_tools(self, url: str) -> list[BaseTool]:
-        #TODO:
-        # 1. Create list of BaseTool
-        # 2. Create MCPClient
-        # 3. Get tools, iterate through them and add them to created list as MCPTool where the client will be created
-        #    MCPClient and mcp_tool_model will be the tool itself (see what `mcp_client.get_tools` returns).
-        # 4. Return created tool list
-        raise NotImplementedError()
+        tools = []
+        client = MCPClient(mcp_server_url=url)
+        mcp_tools = await client.get_tools()
+        for mcp_tool_model in mcp_tools:
+            tools.append(MCPTool(client=client, model=mcp_tool_model))
+
+        return tools
 
     async def _create_tools(self) -> list[BaseTool]:
-        #TODO:
-        # 1. Create list of BaseTool
-        # ---
-        # At the beginning this list can be empty. We will add here tools after they will be implemented
-        # ---
-        # 2. Add ImageGenerationTool with DIAL_ENDPOINT
-        # 3. Add FileContentExtractionTool with DIAL_ENDPOINT
-        # 4. Add RagTool with DIAL_ENDPOINT, DEPLOYMENT_NAME, and create DocumentCache (it has static method `create`)
-        # 5. Add PythonCodeInterpreterTool with DIAL_ENDPOINT, `http://localhost:8050/mcp` mcp_url, tool_name is
-        #    `execute_code`, more detailed about tools see in repository https://github.com/khshanovskyi/mcp-python-code-interpreter
-        # 6. Extend tools with MCP tools from `http://localhost:8051/mcp` (use method `_get_mcp_tools`)
-        return []
+        tools = []
+
+        # tools.append(ImageGenerationTool(endpoint=DIAL_ENDPOINT))
+        # tools.append(FileContentExtractionTool(endpoint=DIAL_ENDPOINT))
+        # tools.append(RagTool(endpoint=DIAL_ENDPOINT, deployment_name=DEPLOYMENT_NAME, document_cache=DocumentCache.create()))
+        # tools.append(await PythonCodeInterpreterTool.create(mcp_url="http://localhost:8050/mcp", dial_endpoint=DIAL_ENDPOINT, tool_name="execute_code"))
+        tools.extend(await self._get_mcp_tools("http://localhost:8051/mcp"))
+        return tools
 
     async def chat_completion(self, request: Request, response: Response) -> None:
-        #TODO:
-        # 1. If `self.tools` are absent then call `_create_tools` method and assign to the `self.tools`
-        # 2. Create `choice` (`with response.create_single_choice() as choice:`) and:
-        #   - Create GeneralPurposeAgent with:
-        #       - endpoint=DIAL_ENDPOINT
-        #       - system_prompt=SYSTEM_PROMPT
-        #       - tools=self.tools
-        #   - call `handle_request` on created agent with:
-        #       - choice=choice
-        #       - deployment_name=DEPLOYMENT_NAME
-        #       - request=request
-        #       - response=response
-        raise NotImplementedError()
+        if not self.tools:
+            self.tools = await self._create_tools()
 
+        with response.create_single_choice() as choice:
+            agent = GeneralPurposeAgent(
+                endpoint=DIAL_ENDPOINT,
+                system_prompt=SYSTEM_PROMPT,
+                tools=self.tools,
+            )
+            await agent.handle_request(
+                deployment_name=DEPLOYMENT_NAME,
+                choice=choice,
+                request=request,
+                response=response,
+            )
+
+dial_app = DIALApp()
+agent_app = GeneralPurposeAgentApplication()
+dial_app.add_chat_completion(
+    deployment_name="general-purpose-agent",
+    impl=agent_app,
+)
+uvicorn.run(dial_app, port=5030, host="0.0.0.0")
 #TODO:
 # 1. Create DIALApp
 # 2. Create GeneralPurposeAgentApplication
