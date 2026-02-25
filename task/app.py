@@ -27,10 +27,10 @@ class GeneralPurposeAgentApplication(ChatCompletion):
 
     async def _get_mcp_tools(self, url: str) -> list[BaseTool]:
         tools = []
-        client = MCPClient(mcp_server_url=url)
+        client = await MCPClient.create(url)
         mcp_tools = await client.get_tools()
         for mcp_tool_model in mcp_tools:
-            tools.append(MCPTool(client=client, model=mcp_tool_model))
+            tools.append(MCPTool(client=client, mcp_tool_model=mcp_tool_model))
 
         return tools
 
@@ -38,10 +38,10 @@ class GeneralPurposeAgentApplication(ChatCompletion):
         tools = []
 
         # tools.append(ImageGenerationTool(endpoint=DIAL_ENDPOINT))
-        # tools.append(FileContentExtractionTool(endpoint=DIAL_ENDPOINT))
+        tools.append(FileContentExtractionTool(endpoint=DIAL_ENDPOINT))
         # tools.append(RagTool(endpoint=DIAL_ENDPOINT, deployment_name=DEPLOYMENT_NAME, document_cache=DocumentCache.create()))
         # tools.append(await PythonCodeInterpreterTool.create(mcp_url="http://localhost:8050/mcp", dial_endpoint=DIAL_ENDPOINT, tool_name="execute_code"))
-        tools.extend(await self._get_mcp_tools("http://localhost:8051/mcp"))
+        # tools.extend(await self._get_mcp_tools("http://localhost:8051/mcp"))
         return tools
 
     async def chat_completion(self, request: Request, response: Response) -> None:
@@ -63,15 +63,5 @@ class GeneralPurposeAgentApplication(ChatCompletion):
 
 dial_app = DIALApp()
 agent_app = GeneralPurposeAgentApplication()
-dial_app.add_chat_completion(
-    deployment_name="general-purpose-agent",
-    impl=agent_app,
-)
+dial_app.add_chat_completion(deployment_name="general-purpose-agent",impl=agent_app)
 uvicorn.run(dial_app, port=5030, host="0.0.0.0")
-#TODO:
-# 1. Create DIALApp
-# 2. Create GeneralPurposeAgentApplication
-# 3. Add to created DIALApp chat_completion with:
-#       - deployment_name="general-purpose-agent"
-#       - impl=agent_app
-# 4. Run it with uvicorn: `uvicorn.run({CREATED_DIAL_APP}, port=5030, host="0.0.0.0")`
