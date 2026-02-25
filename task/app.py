@@ -39,7 +39,7 @@ class GeneralPurposeAgentApplication(ChatCompletion):
 
         # tools.append(ImageGenerationTool(endpoint=DIAL_ENDPOINT))
         tools.append(FileContentExtractionTool(endpoint=DIAL_ENDPOINT))
-        # tools.append(RagTool(endpoint=DIAL_ENDPOINT, deployment_name=DEPLOYMENT_NAME, document_cache=DocumentCache.create()))
+        tools.append(RagTool(endpoint=DIAL_ENDPOINT, deployment_name=DEPLOYMENT_NAME, document_cache=DocumentCache.create()))
         # tools.append(await PythonCodeInterpreterTool.create(mcp_url="http://localhost:8050/mcp", dial_endpoint=DIAL_ENDPOINT, tool_name="execute_code"))
         # tools.extend(await self._get_mcp_tools("http://localhost:8051/mcp"))
         return tools
